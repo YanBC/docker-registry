@@ -109,9 +109,9 @@ func main() {
 
 	wg.Wait()
 	sort.Strings(available_images)
+	fmt.Println(" ########################################### ")
+	fmt.Println("Available images:")
 	for _, full_name := range available_images {
-		fmt.Println("##################")
-		fmt.Println("Available images:")
 		fmt.Println(full_name)
 	}
 }
