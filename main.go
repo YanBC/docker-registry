@@ -5,6 +5,7 @@ import (
 	"flag"
 	"fmt"
 	"io"
+	"log"
 	"net/http"
 	"os"
 	"sort"
@@ -46,21 +47,35 @@ func query_repo(endpoint string) (Repo, error) {
 }
 
 func query_image(endpoint string, name string) {
-	resp, err := http.Get(fmt.Sprintf("http://%s/v2/%s/tags/list", endpoint, name))
+	fail := false
+	url := fmt.Sprintf("http://%s/v2/%s/tags/list", endpoint, name)
+	defer func() {
+		if fail {
+			log.Printf("fail: %s", url)
+		} else {
+			log.Printf("succeed: %s", url)
+		}
+		wg.Done()
+	}()
+	resp, err := http.Get(url)
 	if err != nil {
-		panic(err)
+		fail = true
+		return
 	}
 	defer resp.Body.Close()
 	if resp.StatusCode != 200 {
-		panic(fmt.Errorf("http response error code: %d", resp.StatusCode))
+		fail = true
+		return
 	}
 	body, err := io.ReadAll(resp.Body)
 	if err != nil {
-		panic(err)
+		fail = true
+		return
 	}
 	var image Image
 	if err = json.Unmarshal(body, &image); err != nil {
-		panic(err)
+		fail = true
+		return
 	}
 
 	image_name := fmt.Sprintf("%s/%s", endpoint, name)
@@ -69,7 +84,6 @@ func query_image(endpoint string, name string) {
 	for _, tag := range image.Tags {
 		available_images = append(available_images, fmt.Sprintf("%s:%s", image_name, tag))
 	}
-	wg.Done()
 }
 
 func main() {
@@ -96,6 +110,8 @@ func main() {
 	wg.Wait()
 	sort.Strings(available_images)
 	for _, full_name := range available_images {
+		fmt.Println("##################")
+		fmt.Println("Available images:")
 		fmt.Println(full_name)
 	}
 }
