@@ -8,7 +8,7 @@ import (
 	"sort"
 	"sync"
 
-	"github.com/YanBC/docker-query/registry"
+	"github.com/YanBC/docker-registry/registry"
 )
 
 func list(endpoint string) {

@@ -32,6 +32,7 @@ Usage:
 2. Add logging level option
 3. <del>Refactor, rename functions and variables</del>
 4. Fix bug in delete. When deleting images with the same digest, latter delete will fail with 404 http code.
+5. Add github actions for auto build and release.
 
 
 ## Misc
