@@ -1,117 +1,109 @@
 package main
 
 import (
-	"encoding/json"
 	"flag"
 	"fmt"
-	"io"
 	"log"
-	"net/http"
 	"os"
 	"sort"
 	"sync"
+
+	"github.com/YanBC/docker-query/registry"
 )
 
-type Repo struct {
-	Images []string `json:"repositories"`
-}
-
-type Image struct {
-	Name string   `json:"name"`
-	Tags []string `json:"tags"`
-}
-
-var available_images []string
-var mu sync.Mutex
-var wg sync.WaitGroup
-
-func query_repo(endpoint string) (Repo, error) {
-	url := fmt.Sprintf("http://%s/v2/_catalog", endpoint)
-	resp, err := http.Get(url)
+func list(endpoint string) {
+	names, err := registry.GetAllImageNames(endpoint)
 	if err != nil {
-		return Repo{}, err
+		log.Fatalf("fail to list image repos, error: %s", err)
 	}
-	defer resp.Body.Close()
-	if resp.StatusCode != 200 {
-		return Repo{}, fmt.Errorf("http response error code: %d", resp.StatusCode)
-	}
-	body, err := io.ReadAll(resp.Body)
-	if err != nil {
-		return Repo{}, err
-	}
-	var repo Repo
-	if err = json.Unmarshal(body, &repo); err != nil {
-		return Repo{}, err
-	}
-	return repo, nil
-}
-
-func query_image(endpoint string, name string) {
-	fail := false
-	url := fmt.Sprintf("http://%s/v2/%s/tags/list", endpoint, name)
-	defer func() {
-		if fail {
-			log.Printf("fail: %s", url)
-		} else {
-			log.Printf("succeed: %s", url)
-		}
-		wg.Done()
-	}()
-	resp, err := http.Get(url)
-	if err != nil {
-		fail = true
-		return
-	}
-	defer resp.Body.Close()
-	if resp.StatusCode != 200 {
-		fail = true
-		return
-	}
-	body, err := io.ReadAll(resp.Body)
-	if err != nil {
-		fail = true
-		return
-	}
-	var image Image
-	if err = json.Unmarshal(body, &image); err != nil {
-		fail = true
-		return
-	}
-
-	image_name := fmt.Sprintf("%s/%s", endpoint, name)
-	mu.Lock()
-	defer mu.Unlock()
-	for _, tag := range image.Tags {
-		available_images = append(available_images, fmt.Sprintf("%s:%s", image_name, tag))
-	}
-}
-
-func main() {
-	addr := flag.String("addr", "", "docker registry endpoint")
-	flag.Parse()
-
-	if *addr == "" {
-		fmt.Println("invalid address")
-		os.Exit(64)
-	}
-
-	repo, err := query_repo(*addr)
-	if err != nil {
-		fmt.Println("fail to query available images")
-		panic(err)
-	}
-
-	available_images = make([]string, 0)
-	for _, image_name := range repo.Images {
+	available_images := make([]string, 0)
+	mu := sync.Mutex{}
+	wg := sync.WaitGroup{}
+	for _, name := range names {
 		wg.Add(1)
-		query_image(*addr, image_name)
+		go func(image_name string) {
+			defer wg.Done()
+			full_names, err := registry.GetImageWithTags(endpoint, image_name)
+			if err != nil {
+				log.Printf("fail   : %s", image_name)
+			} else {
+				mu.Lock()
+				defer mu.Unlock()
+				available_images = append(available_images, full_names...)
+				log.Printf("succeed: %s", image_name)
+			}
+		}(name)
 	}
-
+	// print available images with tags
 	wg.Wait()
 	sort.Strings(available_images)
 	fmt.Println(" ########################################### ")
 	fmt.Println("Available images:")
 	for _, full_name := range available_images {
 		fmt.Println(full_name)
+	}
+}
+
+func delete(image_repo string, tag string) {
+	var msg string
+	if tag != "" {
+		image_full_name := fmt.Sprintf("%s:%s", image_repo, tag)
+		if err := registry.DeleteImage(image_full_name); err != nil {
+			msg = fmt.Sprintf("delete %s fail, %s", image_full_name, err)
+		} else {
+			msg = fmt.Sprintf("delete %s succeed", image_full_name)
+		}
+	} else {
+		if err := registry.DeleteRepo(image_repo); err != nil {
+			msg = fmt.Sprintf("delete %s fail, %s", image_repo, err)
+		} else {
+			msg = fmt.Sprintf("delete %s succeed", image_repo)
+		}
+	}
+	fmt.Println(msg)
+}
+
+func help() {
+	executable := os.Args[0]
+	fmt.Printf("docker-query %s\n", VERSION)
+	fmt.Printf("%s list:     list available images\n", executable)
+	fmt.Printf("%s delete:   delete images\n", executable)
+	fmt.Printf("Run %s list/delete -h for usage of each subcommand\n", executable)
+}
+
+func main() {
+	// list
+	listCmd := flag.NewFlagSet("list", flag.ExitOnError)
+	l_addr := listCmd.String("addr", "", "docker registry endpoint")
+
+	// delete
+	deleteCmd := flag.NewFlagSet("delete", flag.ExitOnError)
+	d_repo := deleteCmd.String("repo", "", "image repo to delete")
+	d_tag := deleteCmd.String("tag", "", "tag to delete, empty to delete all tags")
+
+	// parse arguments
+	if len(os.Args) < 2 {
+		help()
+		os.Exit(1)
+	}
+
+	switch os.Args[1] {
+	case "list":
+		listCmd.Parse(os.Args[2:])
+		if *l_addr == "" {
+			fmt.Println("invalid address")
+			os.Exit(1)
+		}
+		list(*l_addr)
+	case "delete":
+		deleteCmd.Parse(os.Args[2:])
+		if *d_repo == "" {
+			fmt.Println("specify which image repo to delete with -repo")
+			os.Exit(1)
+		}
+		delete(*d_repo, *d_tag)
+	default:
+		help()
+		os.Exit(1)
 	}
 }
