@@ -46,7 +46,7 @@ func seperate_repo_full_name(repo_full_name string) (string, string) {
 }
 
 func RegistryAPIDeleteImage(endpoint string, repo string, tag string) error {
-	digest, err := GetImageDigest(endpoint, repo, tag)
+	digest, err := RegistryAPIGetImageDigest(endpoint, repo, tag)
 	if err != nil {
 		return err
 	}
@@ -80,14 +80,14 @@ func DeleteImage(image_full_name string) error {
 
 func DeleteRepo(repo_full_name string) error {
 	endpoint, repo := seperate_repo_full_name(repo_full_name)
-	struct_image, err := QueryImage(endpoint, repo)
+	tags, err := RegistryAPIGetAllTags(endpoint, repo)
 	if err != nil {
 		return err
 	}
 
 	all_succeed := true
 	var ret_err error
-	for _, tag := range struct_image.Tags {
+	for _, tag := range tags {
 		if err := RegistryAPIDeleteImage(endpoint, repo, tag); err != nil {
 			all_succeed = false
 			ret_err = err

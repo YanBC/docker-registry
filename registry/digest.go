@@ -5,7 +5,7 @@ import (
 	"net/http"
 )
 
-func GetImageDigest(endpoint string, repo string, tag string) (string, error) {
+func RegistryAPIGetImageDigest(endpoint string, repo string, tag string) (string, error) {
 	// Create request
 	url := ImageDigestURL(endpoint, repo, tag)
 	req, _ := http.NewRequest("HEAD", url, nil)

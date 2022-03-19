@@ -12,7 +12,7 @@ import (
 )
 
 func list(endpoint string) {
-	names, err := registry.GetAllImageNames(endpoint)
+	names, err := registry.RegistryAPIGetAllRepos(endpoint)
 	if err != nil {
 		log.Fatalf("fail to list image repos, error: %s", err)
 	}
@@ -21,16 +21,16 @@ func list(endpoint string) {
 	wg := sync.WaitGroup{}
 	for _, name := range names {
 		wg.Add(1)
-		go func(image_name string) {
+		go func(repo string) {
 			defer wg.Done()
-			full_names, err := registry.GetImageWithTags(endpoint, image_name)
+			image_full_names, err := registry.ListRepo(endpoint, repo)
 			if err != nil {
-				log.Printf("fail   : %s", image_name)
+				log.Printf("fail   : %s", repo)
 			} else {
 				mu.Lock()
 				defer mu.Unlock()
-				available_images = append(available_images, full_names...)
-				log.Printf("succeed: %s", image_name)
+				available_images = append(available_images, image_full_names...)
+				log.Printf("succeed: %s", repo)
 			}
 		}(name)
 	}
@@ -39,25 +39,25 @@ func list(endpoint string) {
 	sort.Strings(available_images)
 	fmt.Println(" ########################################### ")
 	fmt.Println("Available images:")
-	for _, full_name := range available_images {
-		fmt.Println(full_name)
+	for _, available_image := range available_images {
+		fmt.Println(available_image)
 	}
 }
 
-func delete(image_repo string, tag string) {
+func delete(repo_full_name string, tag string) {
 	var msg string
 	if tag != "" {
-		image_full_name := fmt.Sprintf("%s:%s", image_repo, tag)
+		image_full_name := fmt.Sprintf("%s:%s", repo_full_name, tag)
 		if err := registry.DeleteImage(image_full_name); err != nil {
 			msg = fmt.Sprintf("delete %s fail, %s", image_full_name, err)
 		} else {
 			msg = fmt.Sprintf("delete %s succeed", image_full_name)
 		}
 	} else {
-		if err := registry.DeleteRepo(image_repo); err != nil {
-			msg = fmt.Sprintf("delete %s fail, %s", image_repo, err)
+		if err := registry.DeleteRepo(repo_full_name); err != nil {
+			msg = fmt.Sprintf("delete %s fail, %s", repo_full_name, err)
 		} else {
-			msg = fmt.Sprintf("delete %s succeed", image_repo)
+			msg = fmt.Sprintf("delete %s succeed", repo_full_name)
 		}
 	}
 	fmt.Println(msg)
@@ -66,8 +66,8 @@ func delete(image_repo string, tag string) {
 func help() {
 	executable := os.Args[0]
 	fmt.Printf("docker-query %s\n", VERSION)
-	fmt.Printf("%s list:     list available images\n", executable)
-	fmt.Printf("%s delete:   delete images\n", executable)
+	fmt.Printf("%s list:     	list available images\n", executable)
+	fmt.Printf("%s delete:   	delete image or images\n", executable)
 	fmt.Printf("Run %s list/delete -h for usage of each subcommand\n", executable)
 }
 

@@ -2,8 +2,8 @@ package registry
 
 import "fmt"
 
-func TagListURL(endpoint string, image_repo string) string {
-	return fmt.Sprintf("http://%s/v2/%s/tags/list", endpoint, image_repo)
+func TagListURL(endpoint string, repo string) string {
+	return fmt.Sprintf("http://%s/v2/%s/tags/list", endpoint, repo)
 }
 
 func RepoListURL(endpoint string) string {
