@@ -30,7 +30,7 @@ func list(endpoint string) {
 				mu.Lock()
 				defer mu.Unlock()
 				available_images = append(available_images, image_full_names...)
-				log.Printf("succeed: %s", repo)
+				// log.Printf("succeed: %s", repo)
 			}
 		}(name)
 	}
