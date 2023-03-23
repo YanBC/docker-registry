@@ -6,26 +6,33 @@ Subcommand:
 
 Build: `go build -o docker-registry main.go version.go`
 
-Usage:
+## Usage
+
+To view the available commands and options, run:
+
 ```bash
-# print usage
 ./docker-registry help
-# output:
-# docker-query 1.0.0
-# ./docker-registry list:     list available images
-# ./docker-registry delete:   delete images
-# Run ./docker-registry list/delete -h for usage of each subcommand
-
-# list registry
-./docker-registry list -addr 172.17.0.2:5000
-
-# delete image(s)
-## delete the whole image repo
-./docker-registry delete -repo 172.17.0.2:5000/busybox
-## delete single image
-./docker-registry delete -repo 172.17.0.2:5000/busybox -tag latest
 ```
 
+### List images
+
+To list all the images available in a registry, run:
+
+```bash
+./docker-registry list -addr <registry_address>
+```
+
+Replace `<registry_address>` with the IP address and port number of your registry.
+
+### Delete images
+
+To delete an image, run:
+
+```bash
+./docker-registry delete -repo <repo_full_name> [-tag <tag>]
+```
+
+Replace `<repo_full_name>` with the full name of the repository you want to delete, in the format `<registry_address>/<repo_name>`. If you want to delete a specific tag of an image, add the `-tag` option.
 
 ## TODOs
 1. Regex in `seperate_image_full_name` and `seperate_repo_full_name`
@@ -35,14 +42,15 @@ Usage:
 5. Add github actions for auto build and release.
 
 
-## Misc
-### Naming convention
-Normally, a self-hosted docker **registry** contains many image repositories (**repo**). And each image repository contains one image with multiple tags. One image repo name and one tag identify one available **image**.
+## Naming convention
 
-In that regard, when naming variables in this project, I use the following conventions:
-1. `registry`/`endpoint`: `<ip>:<port>`, address of a docker registry
-2. `repo`: name of a repo
-3. `repo_full_name`: `<endpoint>/<repo>`
-4. `tag`: one of possibly many tags of a repo
-5. `image`: `<repo>:<tag>`
-6. `image_full_name`: `<endpoint>/<repo>:<tag>`
+In a self-hosted Docker registry, there are many image repositories (**repo**), each containing one or more images with multiple tags. A repository name and a tag together identify a specific **image**.
+
+In this tool, we use the following naming conventions for variables:
+
+1. `registry` or `endpoint`: The address (IP and port) of a Docker registry.
+2. `repo`: The name of a repository.
+3. `repo_full_name`: The full name of a repository, in the format `<registry_address>/<repo_name>`.
+4. `tag`: A specific tag associated with an image.
+5. `image`: The name of an image, in the format `<repo>:<tag>`.
+6. `image_full_name`: The full name of an image, in the format `<registry_address>/<repo>:<tag>`.
