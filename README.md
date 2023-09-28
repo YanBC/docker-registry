@@ -4,14 +4,19 @@ Subcommand:
 - `list`: list all available images
 - `delete`: delete specified image
 
-Build: `go build -o docker-registry main.go version.go`
+## Install
+```bash
+git clone https://github.com/YanBC/docker-registry.git
+cd docker-registry
+go install github.com/yanbc/docker-registry
+```
 
 ## Usage
 
 To view the available commands and options, run:
 
 ```bash
-./docker-registry help
+docker-registry help
 ```
 
 ### List images
@@ -19,7 +24,7 @@ To view the available commands and options, run:
 To list all the images available in a registry, run:
 
 ```bash
-./docker-registry list -addr <registry_address>
+docker-registry list -addr <registry_address>
 ```
 
 Replace `<registry_address>` with the IP address and port number of your registry.
@@ -29,7 +34,7 @@ Replace `<registry_address>` with the IP address and port number of your registr
 To delete an image, run:
 
 ```bash
-./docker-registry delete -repo <repo_full_name> [-tag <tag>]
+docker-registry delete -repo <repo_full_name> [-tag <tag>]
 ```
 
 Replace `<repo_full_name>` with the full name of the repository you want to delete, in the format `<registry_address>/<repo_name>`. If you want to delete a specific tag of an image, add the `-tag` option.
